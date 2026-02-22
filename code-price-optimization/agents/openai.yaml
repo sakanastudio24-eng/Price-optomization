@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Price Optimization"
+  short_description: "Optimize cloud/API/tooling spend with guided diagnosis"
+  default_prompt: "Use $code-price-optimization to diagnose my stack costs and produce a 2026 optimization plan by budget, region, and constraints."
