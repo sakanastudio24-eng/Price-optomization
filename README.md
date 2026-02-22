@@ -10,6 +10,7 @@ This repository contains a Codex skill for diagnosing and reducing software and 
   - Country and residency-aware planning
   - Budget and company-size tailored playbooks
   - Tool-subscription controls (including Postman seat usage)
+  - Correct-practice teaching checklist with anti-patterns and validation metrics
 
 ## Quick Start
 
@@ -40,3 +41,4 @@ python3 code-price-optimization/scripts/diagnose_cost_plan.py --format json
 
 - `code-price-optimization/references/2026-standards-and-sources.md`
 - `code-price-optimization/references/diagnosis-matrix.md`
+- `code-price-optimization/references/correct-practices.md`

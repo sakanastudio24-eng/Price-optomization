@@ -35,6 +35,11 @@ Use this skill to produce a defensible cost diagnosis and a prioritized optimiza
 - Include explicit unit metrics (`cost/1M requests`, `cost/active user`, `egress/request`).
 - Include tradeoffs and expected impact for each recommendation.
 
+6. Teach correct practices and anti-patterns.
+- Use `references/correct-practices.md` to include a clear `Do`, `Avoid`, and `Measure` set.
+- Explain why each practice matters in cost, reliability, and compliance terms.
+- Call out any user-requested shortcut that violates a core practice.
+
 ## Commands
 
 Basic diagnosis:
@@ -78,8 +83,14 @@ Always provide:
 3. 90-day rollout plan split into immediate, medium, and follow-up actions.
 4. Country or residency impacts when region placement is constrained.
 5. Source-backed rationale for standards and platform guidance.
+6. A `Correct Practices` section with:
+- `Do`: practices to adopt now.
+- `Avoid`: anti-patterns and risky shortcuts.
+- `Measure`: 3-5 metrics to validate outcomes.
+7. A `Policy Boundaries` note for restrictions (for example PCI, HIPAA, FedRAMP, data residency).
 
 ## References
 
 - 2026 standards and official sources: `references/2026-standards-and-sources.md`
 - Budget, company-size, system-type, and restriction playbooks: `references/diagnosis-matrix.md`
+- Correct-practice checklists and anti-patterns: `references/correct-practices.md`
