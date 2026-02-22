@@ -33,6 +33,14 @@ def budget_tier(monthly_budget_usd: float) -> str:
     return "enterprise"
 
 
+def add_unique(items: List[str], additions: List[str]) -> None:
+    seen = set(items)
+    for addition in additions:
+        if addition not in seen:
+            seen.add(addition)
+            items.append(addition)
+
+
 def add_action(
     actions: List[Dict[str, object]],
     dedupe: Set[str],
@@ -338,6 +346,163 @@ def build_summary(args: argparse.Namespace, tier: str) -> Dict[str, object]:
     }
 
 
+def build_correct_practices(args: argparse.Namespace) -> Dict[str, List[str]]:
+    do_items = [
+        "Track core unit metrics weekly: cost/1M requests, cost/active user, egress/1K requests.",
+        "Require consistent tagging and ownership on production resources.",
+        "Run a monthly seat audit for paid tooling and remove inactive users.",
+    ]
+    avoid_items = [
+        "Do not optimize from monthly total bill alone without unit metrics.",
+        "Do not commit to long reservations before usage stabilizes.",
+        "Do not accept unlimited retries on expensive API paths.",
+    ]
+    measure_items = [
+        "Tagged spend percentage",
+        "Budget variance by workload",
+        "Requests per compute hour",
+    ]
+
+    if args.preload_ratio >= 0.25:
+        add_unique(
+            do_items,
+            [
+                "Move low-hit preload flows to demand fetch and enforce cache TTL rules.",
+            ],
+        )
+        add_unique(
+            avoid_items,
+            [
+                "Do not preload low-hit datasets by default.",
+            ],
+        )
+        add_unique(
+            measure_items,
+            [
+                "Preload hit-rate",
+            ],
+        )
+
+    if args.monthly_egress_gb >= 2000:
+        add_unique(
+            do_items,
+            [
+                "Route static and cacheable traffic through CDN with compression enabled.",
+            ],
+        )
+        add_unique(
+            avoid_items,
+            [
+                "Do not keep cross-region reads as default where in-region serving is viable.",
+            ],
+        )
+        add_unique(
+            measure_items,
+            [
+                "Egress MB per 1K requests",
+                "CDN offload percentage",
+            ],
+        )
+
+    if args.postman_seats > 10:
+        add_unique(
+            do_items,
+            [
+                "Role-segment API tooling seats and keep paid author seats for active producers.",
+            ],
+        )
+        add_unique(
+            avoid_items,
+            [
+                "Do not keep duplicated workspaces and stale collections indefinitely.",
+            ],
+        )
+        add_unique(
+            measure_items,
+            [
+                "Active-to-paid seat ratio",
+            ],
+        )
+
+    if args.country.upper() in EEA_COUNTRIES or "data-residency" in args.restrictions:
+        add_unique(
+            do_items,
+            [
+                "Select compliant data-plane regions before optimization of unit rates.",
+            ],
+        )
+        add_unique(
+            avoid_items,
+            [
+                "Do not choose lowest-cost regions that violate residency obligations.",
+            ],
+        )
+        add_unique(
+            measure_items,
+            [
+                "Policy exception count for residency controls",
+            ],
+        )
+
+    if any(r in args.restrictions for r in {"pci", "hipaa", "fedramp"}):
+        add_unique(
+            do_items,
+            [
+                "Model compliance boundary cost separately from general infrastructure spend.",
+            ],
+        )
+        add_unique(
+            avoid_items,
+            [
+                "Do not bypass compliance segmentation to reduce short-term cost.",
+            ],
+        )
+        add_unique(
+            measure_items,
+            [
+                "Remediation time for non-compliant cost-critical services",
+            ],
+        )
+
+    return {
+        "do": do_items,
+        "avoid": avoid_items,
+        "measure": measure_items[:6],
+    }
+
+
+def build_policy_boundaries(args: argparse.Namespace) -> List[str]:
+    boundaries: List[str] = []
+
+    if args.country.upper() in EEA_COUNTRIES or "data-residency" in args.restrictions:
+        boundaries.append(
+            "Data residency boundary: keep data-plane services in approved in-country or in-region locations before cost tuning."
+        )
+    if "pci" in args.restrictions:
+        boundaries.append(
+            "PCI boundary: preserve segmentation and cardholder-data scoping; do not merge compliant and non-compliant paths for convenience."
+        )
+    if "hipaa" in args.restrictions:
+        boundaries.append(
+            "HIPAA boundary: maintain required safeguards and access controls; cost changes must preserve PHI protections."
+        )
+    if "fedramp" in args.restrictions:
+        boundaries.append(
+            "FedRAMP boundary: remain within authorized regions/services and keep audit trails for all spend-control changes."
+        )
+    if "soc2" in args.restrictions:
+        boundaries.append(
+            "SOC 2 boundary: maintain auditable ownership, change control, and exception workflows for cost-related decisions."
+        )
+
+    if not boundaries:
+        boundaries.append(
+            "No explicit regulatory restriction was provided; still require ownership tagging, change logs, and budget guardrails."
+        )
+
+    return boundaries
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Diagnose cost profile and generate ranked optimization actions."
@@ -380,7 +545,13 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def render_text(summary: Dict[str, object], actions: List[Dict[str, object]], phases: Dict[str, List[str]]) -> str:
+def render_text(
+    summary: Dict[str, object],
+    actions: List[Dict[str, object]],
+    phases: Dict[str, List[str]],
+    correct_practices: Dict[str, List[str]],
+    policy_boundaries: List[str],
+) -> str:
     lines: List[str] = []
     lines.append("Cost Diagnosis")
     lines.append("================")
@@ -427,6 +598,25 @@ def render_text(summary: Dict[str, object], actions: List[Dict[str, object]], ph
         else:
             lines.append("- none")
 
+    lines.append("")
+    lines.append("Correct Practices")
+    lines.append("-----------------")
+    lines.append("Do:")
+    for item in correct_practices["do"]:
+        lines.append(f"- {item}")
+    lines.append("Avoid:")
+    for item in correct_practices["avoid"]:
+        lines.append(f"- {item}")
+    lines.append("Measure:")
+    for item in correct_practices["measure"]:
+        lines.append(f"- {item}")
+
+    lines.append("")
+    lines.append("Policy Boundaries")
+    lines.append("-----------------")
+    for item in policy_boundaries:
+        lines.append(f"- {item}")
+
     return "\n".join(lines)
 
 
@@ -436,6 +626,8 @@ def main() -> None:
     summary = build_summary(args, tier)
     actions = build_actions(args, tier)
     phases = phase_actions(actions)
+    correct_practices = build_correct_practices(args)
+    policy_boundaries = build_policy_boundaries(args)
 
     payload = {
         "inputs": {
@@ -455,13 +647,15 @@ def main() -> None:
         "summary": summary,
         "actions": actions,
         "phases": phases,
+        "correct_practices": correct_practices,
+        "policy_boundaries": policy_boundaries,
     }
 
     if args.format == "json":
         print(json.dumps(payload, indent=2))
         return
 
-    print(render_text(summary, actions, phases))
+    print(render_text(summary, actions, phases, correct_practices, policy_boundaries))
 
 
 if __name__ == "__main__":

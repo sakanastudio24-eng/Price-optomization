@@ -37,6 +37,20 @@ python3 code-price-optimization/scripts/diagnose_cost_plan.py \
 python3 code-price-optimization/scripts/diagnose_cost_plan.py --format json
 ```
 
+## Install Into Codex
+
+Copy this skill into your Codex skills directory, then invoke it by name.
+
+```bash
+cp -R code-price-optimization "$CODEX_HOME/skills/"
+```
+
+Invocation example:
+
+```text
+$code-price-optimization optimize my api-saas spend for DE with soc2 and a $20k monthly budget
+```
+
 ## Reference Sources
 
 - `code-price-optimization/references/2026-standards-and-sources.md`
